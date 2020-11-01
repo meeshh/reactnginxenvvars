@@ -51,4 +51,4 @@ Also have your development server running with `yarn start` and head to your bro
 
 Now compare the two pages
 
-![alt text](https://github.com/[meeshh]/[reactnginxenvvars]/blob/[master]/screenshot.png?raw=true)
+![example](https://github.com/meeshh/reactnginxenvvars/blob/master/screenshot.png)
