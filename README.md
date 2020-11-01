@@ -1,70 +1,54 @@
-# Getting Started with Create React App
+# React, NGINX, Docker and Environment Variables
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-## Available Scripts
+## Why this project?
 
-In the project directory, you can run:
+Many of us dockerize our react applications and then attempt to serve them with an NGINX server. Howver, sometimes we have complex architetures and will want to deploy our app to multiple servers each with a different environment.
 
-### `yarn start`
+A practice by react developers is to use and leverage the environment variables to switch between different backend instances and test on multiple node environments whether it is development, staging, production, etc...
+This happens often within pipelines that automate the CI/CD process.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+We might think that _CREATE REACT APP_ handles environment variables like we want it to do, however, it is clears in the docs that the environment variables are embedded during the build time. This is why we cannot have our dev server running, change our .env file and expect the app to adjust on the fly. We should always restart the server. In production, we should rebuild the application. Read more about the environment variables [here]("https://create-react-app.dev/docs/adding-custom-environment-variables/").
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## The problem
 
-### `yarn test`
+### Imagine the following scenario:
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+We pull a node image from dockerhub, use it to create a build of our app, then we pull an NGINX image from docker hub, transfer the built app to it and then bundle everything and build a unique image that when run in a container, it is supposed to serve our application.
 
-### `yarn build`
+The problem is when `yarn build` was executed in the process of the first image, create react app has already embedded environment variables. So when we have the product image at the end and decide to run it in a container with custom environment variables like so: `docker run -e "my_env_var=MY_ENV_VAL" imagename`, the react application will not be able to read `my_env_var` hence the `process.env` object inside react will only have what react puts in it as default such as the `NODE_ENV` variable.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## The solution
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+Since we are using NGINX as a server, we can create a route that serves the application settings then fetch them when our application loads for the first time and store them in the state or wherever we please.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+To do so, we should consider creating a template json file that will hold the keys to our needed environment variables copy it to the image build, and inject the environment variables at runtime with `envsubst` in a small bash script. So what is happening is that our script creates an `appsettings.json` file based on our template and substitutes the values of the variables with the ones provided at runtime.
 
-### `yarn eject`
+Inside our `app.js`, we use a `useEffect` hook to call the /appsettings route which responds with the values that we need.
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+The code is pretty straight forward in react.
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+I have committed the `.env` file as well for the example's clarity.
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+## Testing the solution
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+First of all have docker desktop installed and make sure you don't change the `Dockerfile` as the versions of both node and nginx images that are in use have already pre-installed tools such as `yarn` in case of node and `gettext` in case of nginx.
 
-## Learn More
+- `yarn install` in order to have the modules on your local machine so you can run the development environment
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- `yarn start` in order to run the development environment
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+To run a production build, we shouf involve docker.
 
-### Code Splitting
+- So have your docker desktop running and open your favorite shell
+- `docker build -t reactnginximage .` to build the product image (don't forget the dot at the end of the command to instruct the build where the `Dockerfile` is located)
+- When the build finishes, run the product image in a container with the following command: `docker run --name reactnginxcontainer -e "REACT_APP_FIRST_VARIABLE=production first value" -e "REACT_APP_SECOND_VARIABLE=production second value" -p 4000:80/tcp reactnginximage`
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+This will run and serve your production build on your localhost port 4000 so when the container is running, head to your browser, navigate to `localhost:4000`
 
-### Analyzing the Bundle Size
+Also have your development server running with `yarn start` and head to your browser and navigate to `localhost:3000`
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+Now compare the two pages
 
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `yarn build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+![alt text](https://github.com/[meeshh]/[reactnginxenvvars]/blob/[master]/screenshot.png?raw=true)

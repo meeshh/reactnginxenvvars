@@ -1,5 +1,15 @@
 {
-  "name": "dockernginx",
+  "name": "reactnginxenvvars",
+  "description": "This is an example on how to serve a react application with NGINX and read the environment variables at run time",
+  "keywords": [
+    "react",
+    "nginx",
+    "environment variables",
+    "runtime"
+  ],
+  "author": {
+    "name": "Michel Barakat"
+  },
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -13,9 +23,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "build": "react-scripts build"
   },
   "eslintConfig": {
     "extends": [
